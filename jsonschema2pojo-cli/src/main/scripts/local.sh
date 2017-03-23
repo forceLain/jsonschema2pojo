@@ -1,0 +1,1 @@
+java -Djson_schema_url=https://raw.githubusercontent.com/washingtonpost/ans-schema/master/src/main/resources/schema/ans/0.5.8/ -jar jsonschema2pojo-cli-0.4.33-SNAPSHOT.jar -a GSON -D -s /Users/a.glyzin/projects/android-classic/ans-schema/src/main/resources/schema/ans/0.5.8 -t /Users/a.glyzin/generated/ -F org.jsonschema2pojo.LocalRuleFactory -p com.washingtonpost.ans.models -E -S
