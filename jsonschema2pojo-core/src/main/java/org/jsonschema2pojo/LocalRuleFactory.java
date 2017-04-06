@@ -17,8 +17,7 @@
 package org.jsonschema2pojo;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.sun.codemodel.JClassContainer;
-import com.sun.codemodel.JType;
+import com.sun.codemodel.*;
 import org.jsonschema2pojo.rules.Rule;
 import org.jsonschema2pojo.rules.RuleFactory;
 import org.jsonschema2pojo.util.URLUtil;
@@ -69,6 +68,11 @@ public class LocalRuleFactory extends RuleFactory {
         return new CustomEnumRule(super.getEnumRule());
     }
 
+    @Override
+    public Rule<JDefinedClass, JDefinedClass> getPropertyRule() {
+        return new CustomPropertyRule(super.getPropertyRule());
+    }
+
     static class LocalContentResolver extends ContentResolver {
 
         private static final Map<String, String> LOCAL_MAP = new HashMap<String, String>();
@@ -113,6 +117,39 @@ public class LocalRuleFactory extends RuleFactory {
 
         private JType asString(String nodeName, JsonNode node, JClassContainer generatableType, Schema currentSchema) {
             return generatableType.owner().ref(String.class);
+        }
+    }
+
+    private class CustomPropertyRule implements Rule<JDefinedClass, JDefinedClass> {
+        private final Rule<JDefinedClass, JDefinedClass> normalPropertyRule;
+
+        public CustomPropertyRule(Rule<JDefinedClass, JDefinedClass> propertyRule) {
+            normalPropertyRule = propertyRule;
+        }
+
+        @Override
+        public JDefinedClass apply(String nodeName, JsonNode node, JDefinedClass jclass, Schema currentSchema) {
+            String propertyName = getNameHelper().getPropertyName(nodeName, node);
+            boolean parentPropertyDuplicated = parentHasProperty(propertyName, jclass);
+
+            if (parentPropertyDuplicated) {
+                return jclass;
+            }
+            return normalPropertyRule.apply(nodeName, node, jclass, currentSchema);
+        }
+
+        private boolean parentHasProperty(String propertyName, JDefinedClass jclass) {
+            JClass parentClass = jclass._extends();
+            if (parentClass instanceof JDefinedClass) {
+                JDefinedClass jDefinedClass = (JDefinedClass) parentClass;
+                Map<String, JFieldVar> fields = jDefinedClass.fields();
+                boolean containsKey = fields.containsKey(propertyName);
+                if (containsKey) {
+                    return true;
+                }
+                return parentHasProperty(propertyName, jDefinedClass);
+            }
+            return false;
         }
     }
 }
