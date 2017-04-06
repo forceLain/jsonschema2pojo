@@ -17,6 +17,9 @@
 package org.jsonschema2pojo;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.sun.codemodel.JClassContainer;
+import com.sun.codemodel.JType;
+import org.jsonschema2pojo.rules.Rule;
 import org.jsonschema2pojo.rules.RuleFactory;
 import org.jsonschema2pojo.util.URLUtil;
 
@@ -61,6 +64,11 @@ public class LocalRuleFactory extends RuleFactory {
         }
     }
 
+    @Override
+    public Rule<JClassContainer, JType> getEnumRule() {
+        return new CustomEnumRule(super.getEnumRule());
+    }
+
     static class LocalContentResolver extends ContentResolver {
 
         private static final Map<String, String> LOCAL_MAP = new HashMap<String, String>();
@@ -85,6 +93,26 @@ public class LocalRuleFactory extends RuleFactory {
                 }
             }
             return null;
+        }
+    }
+
+    private class CustomEnumRule implements Rule<JClassContainer, JType> {
+        private final Rule<JClassContainer, JType> normalEnumRule;
+
+        CustomEnumRule(Rule<JClassContainer, JType> enumRule) {
+            this.normalEnumRule = enumRule;
+        }
+
+        @Override
+        public JType apply(String nodeName, JsonNode node, JClassContainer generatableType, Schema currentSchema) {
+            if (nodeName.equals("type")) {
+                return asString(nodeName, node, generatableType, currentSchema);
+            }
+            return normalEnumRule.apply(nodeName, node, generatableType, currentSchema);
+        }
+
+        private JType asString(String nodeName, JsonNode node, JClassContainer generatableType, Schema currentSchema) {
+            return generatableType.owner().ref(String.class);
         }
     }
 }
